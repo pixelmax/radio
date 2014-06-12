@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="us">
+<head>
+	<meta charset="utf-8">
+	<title>jQuery UI Example Page</title>
+	<script src="js/jquery-1.10.2.js"></script>	
+	<script src="js/jquery-ui-1.10.4.custom.min.js"></script>	
+	<script src="js/jquery.Storage.js"></script>	
+	<script src="js/soundmanager2-jsmin.js"></script>	
+	<style>
+		.pl_controlls {  height: 59px;  }
+		.pl_controlls .play_pause { cursor: pointer; width: 134px; height: 59px; background-image: url('player_line_but.png'); background-repeat: no-repeat;float:left; }
+		.pl_controlls .play_pause.playing { background-position: 0 -59px; }
+		.pl_controlls .play_pause.noready { background-position: 0 -118px !important; }
+		.pl_controlls .volume { width: 21px; height: 59px; background-image: url('vol_back.png'); background-position: center; background-repeat: no-repeat;float:left;margin-left:-3px;}
+		.pl_controlls .volume .vol_zapo { position: absolute; width: 21px; height: 59px; background-image: url('vol_zapo.png'); background-position: top center; background-repeat: repeat-y; }
+		.pl_controlls .volume .vol_razd { position: absolute; width: 20px; height: 20px; background-image: url(vol_back.png); background-position: center; background-repeat: no-repeat; border-bottom: 2px #a6a5a5 solid; margin-left: 1px; }
+		.pl_controlls .volume .vol_clickable { position: absolute; width: 20px; height: 59px; margin-left: 1px; }
+	</style>
+</head>
+<body>
+
+
+<div class="pl_controlls">
+	<div class="play_pause noready"></div>
+	<div class="volume">
+		<div class="vol_zapo"></div>
+		<div id="vol_razd" class="vol_razd"></div>
+		<div id="vol_clickable" class="vol_clickable"></div>
+	</div>
+</div>
+<script>
+	//if (parseInt($.Storage.get('record_volume'))<1) { $.Storage.set('record_volume', '60'); }
+var sm_volume = 50;//$.Storage.get('record_volume');
+
+soundManager.setup({
+	url: 'swf',
+	flashVersion: 9,	
+	preferFlash: true,	
+	useHighPerformance: true});
+
+var sm_err_counter = 0;
+soundManager.onerror = function() {
+	sm_err_counter++;
+	if (sm_err_counter<10) { setTimeout(function() { soundManager.reboot(); }, 10000); }
+	else { 	}
+};
+
+var sm_duration = 0;
+var sm_durationEstimate = 0;
+var sm_positon = 0;
+var old_seconds = 0;
+
+
+function start_play(url, from) {
+	stop_play(from);
+	var global_sound = soundManager.createSound({
+		id: from,
+		url: url,
+		autoLoad: false,
+		autoPlay: true,
+		useFastPolling: true,
+		volume: sm_volume,
+		whileplaying: function() {
+			sm_durationEstimate = this.durationEstimate
+			sm_positon = this.position;
+			sm_duration = this.duration;
+			old_seconds = Math.floor(this.position/1000);
+		}
+	});
+}
+
+function stop_play(from) {
+	//console.log('stop from '+from);
+	soundManager.destroySound(from);
+	soundManager.stopAll();
+	//if ($.Storage.get('play_from') == from) { $.Storage.remove('play_from'); }
+}
+	
+	
+	
+	
+	soundManager.onready(function() {
+		$('.pl_controlls').children('.play_pause').removeClass('noready');
+	});
+
+	$('.pl_controlls').children('.play_pause').on('click', function() {
+		if($(this).hasClass('playing')) {
+			stop_play('topindex');
+			$('.pl_controlls').children('.play_pause').removeClass('playing');
+		}
+		else {
+			start_play('http://air.radiorecord.ru:8101/rr_320', 'topindex');
+			$('.pl_controlls').children('.play_pause').addClass('playing');
+			var topindex_check = setInterval(function() {
+				//console.log('interval check');
+				//if($.Storage.get('play_from') != 'topindex') { $('.pl_controlls').children('.play_pause').removeClass('playing'); stop_play('topindex'); clearInterval(topindex_check); }
+			}, 500);
+		}
+	});
+
+	$(function() {
+		$('#vol_razd').css('height', 57-sm_volume*0.57);
+	
+		$('#vol_clickable').slider({
+			orientation: "vertical",
+			range: "min",
+			min: 0,
+			max: 100,
+			value: sm_volume,
+			slide: function( event, ui ) {
+				$('#vol_razd').css('height', 57-ui.value*0.57);
+				sm_volume=ui.value;
+				soundManager.setVolume('topindex',ui.value);
+				//$.Storage.set('record_volume', ui.value+'');
+			}
+		});
+		
+		
+	});
+</script>	
+
+</body>
+</html>
